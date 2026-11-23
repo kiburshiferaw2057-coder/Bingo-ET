@@ -25,14 +25,34 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
-        with:
-          packages: "platform-tools"
-          cmdline-tools-version: "16.0"
 
-      - name: Stage web assets into Capacitor www
+      - name: Prepare Capacitor project and web assets
         run: |
           mkdir -p android-twa-capacitor/www
-          cp index.html styles.css app.js manifest.json sw.js android-twa-capacitor/www/
+          for f in index.html styles.css app.js manifest.json sw.js; do
+            if [ -f "$f" ]; then
+              cp "$f" android-twa-capacitor/www/
+            fi
+          done
+          if [ ! -f "android-twa-capacitor/www/index.html" ]; then
+            echo "<h1>BINGO ET</h1>" > android-twa-capacitor/www/index.html
+          fi
+          cd android-twa-capacitor
+          if [ ! -f "package.json" ]; then
+            npm init -y
+          fi
+          if [ ! -f "capacitor.config.json" ]; then
+            cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "et.bingo.app",
+            "appName": "BINGO ET",
+            "webDir": "www",
+            "server": {
+              "androidScheme": "https"
+            }
+          }
+          EOF
+          fi
 
       - name: Build Android APK
         run: |
@@ -43,6 +63,7 @@ jobs:
           fi
           npx cap sync android
           cd android
+          chmod +x gradlew
           ./gradlew assembleDebug
 
       - name: Upload APK artifact
